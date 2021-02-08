@@ -7,6 +7,7 @@ authors = ["Leonardo Cavaletti <impeto.blu@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.6"
 rich = "^9.10.0"
+lxml = "^4.6.2"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.6.0"

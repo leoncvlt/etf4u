@@ -6,6 +6,8 @@ import csv
 import operator
 import pkgutil
 
+from datetime import datetime
+from pathlib import Path
 from rich import print
 from rich.logging import RichHandler
 from rich.traceback import install as install_rich_tracebacks
@@ -15,9 +17,28 @@ install_rich_tracebacks()
 
 import adapters
 
-
 def combine_dicts(a, b, op=operator.add):
     return {**a, **b, **{k: op(float(a[k]), float(b[k])) for k in a.keys() & b}}
+
+
+def query(fund, fetch_method):
+    now = datetime.now()
+    cached_file = Path(".cache") / f"{fund.upper()}_{now.strftime('%Y%m%d')}.csv"
+    if cached_file.is_file():
+        log.debug(f"Using data from cached file: {cached_file}")
+        with open(cached_file, "r") as csv_file:
+            reader = csv.reader(csv_file)
+            return {rows[0]: float(rows[1]) for rows in reader}
+    else:
+        data = fetch_method(fund)
+        if data:
+            cached_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(cached_file, "w") as csv_file:
+                log.debug(f"Caching data to file: {cached_file}")
+                writer = csv.writer(csv_file, delimiter=",", lineterminator="\n")
+                for holding, weight in data.items():
+                    writer.writerow([holding, weight])
+        return data
 
 
 def main():
@@ -40,6 +61,11 @@ def main():
         "--out-file",
         help="Exports the holdings list to this comma-separated (.csv) file",
     )
+    argparser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Don't load from / save to cache files",
+    )
     args = argparser.parse_args()
 
     # configure logging for the application
@@ -57,16 +83,26 @@ def main():
     # start the application
     portfolio = {}
     for fund in args.fund:
+        sanitized_fund = fund.lower()
         for loader, name, _ in pkgutil.iter_modules(adapters.__path__):
-            sanitized_fund = fund.lower()
             adapter = loader.find_module(name).load_module(name)
             if sanitized_fund in adapter.FUNDS:
                 log.info(f"Fetching ETF {sanitized_fund.upper()} using {name} adapter")
-                result = adapter.query(sanitized_fund)
+                if (args.no_cache):
+                    result = adapter.fetch(sanitized_fund)
+                else:
+                    result = query(sanitized_fund, adapter.fetch)
                 portfolio = combine_dicts(portfolio, result)
                 break
         else:
-            log.warning(f"No adapter found for ETF {fund}")
+            log.warning(f"No adapter found for ETF {fund}, using default etfdbd adapter")
+            from adapters import etfdb
+            if (args.no_cache):
+                result = etfdb.fetch(sanitized_fund)
+            else:
+                result = query(sanitized_fund, etfdb.fetch)
+           
+            portfolio = combine_dicts(portfolio, result)
 
     if args.clamp:
         portfolio = dict(
