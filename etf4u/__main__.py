@@ -17,6 +17,7 @@ install_rich_tracebacks()
 
 import adapters
 
+
 def combine_dicts(a, b, op=operator.add):
     return {**a, **b, **{k: op(float(a[k]), float(b[k])) for k in a.keys() & b}}
 
@@ -44,18 +45,19 @@ def query(fund, fetch_method):
 def main():
     # parse command line arguments
     argparser = argparse.ArgumentParser(
-        description="Creates a stock portfolio by mix and matching ETFs on the web"
+        description="Scrapes ETF holdings data and creates blended assets lists"
     )
     argparser.add_argument(
-        "--fund",
-        action="append",
+        "--funds",
+        nargs="+",
+        default=[],
         help="Add the ETF with this symbol to the mix",
     )
     argparser.add_argument(
         "--clamp",
         type=int,
         default=0,
-        help="Clamp the number of maximum holdings to this value, and redistribute weights",
+        help="Clamp the number of maximum assets to this value, redistributing weights",
     )
     argparser.add_argument(
         "--out-file",
@@ -64,31 +66,34 @@ def main():
     argparser.add_argument(
         "--no-cache",
         action="store_true",
-        help="Don't load from / save to cache files",
+        help="Don't use cache files to load or store data",
+    )
+    argparser.add_argument(
+        "-v", "--verbose", action="store_true", help="Increase output log verbosity"
     )
     args = argparser.parse_args()
 
     # configure logging for the application
-    log = logging.getLogger()
-    log.setLevel(logging.DEBUG)
+    log = logging.getLogger("etf4u")
+    log.setLevel(logging.INFO if not args.verbose else logging.DEBUG)
     rich_handler = RichHandler()
     rich_handler.setFormatter(logging.Formatter(fmt="%(message)s", datefmt="[%X]"))
     log.addHandler(rich_handler)
     log.propagate = False
 
-    if not args.fund:
-        log.warning("Please add at least one ETF fund with using --fund [symbol]")
+    if not args.funds:
+        log.warning("Please add at least one ETF fund with using --funds [symbol]")
         sys.exit(0)
 
     # start the application
     portfolio = {}
-    for fund in args.fund:
+    for fund in args.funds:
         sanitized_fund = fund.lower()
         for loader, name, _ in pkgutil.iter_modules(adapters.__path__):
             adapter = loader.find_module(name).load_module(name)
             if sanitized_fund in adapter.FUNDS:
                 log.info(f"Fetching ETF {sanitized_fund.upper()} using {name} adapter")
-                if (args.no_cache):
+                if args.no_cache:
                     result = adapter.fetch(sanitized_fund)
                 else:
                     result = query(sanitized_fund, adapter.fetch)
@@ -97,11 +102,12 @@ def main():
         else:
             log.warning(f"No adapter found for ETF {fund}, using default etfdbd adapter")
             from adapters import etfdb
-            if (args.no_cache):
+
+            if args.no_cache:
                 result = etfdb.fetch(sanitized_fund)
             else:
                 result = query(sanitized_fund, etfdb.fetch)
-           
+
             portfolio = combine_dicts(portfolio, result)
 
     if args.clamp:
@@ -115,11 +121,15 @@ def main():
     for holding, weight in portfolio.items():
         portfolio[holding] = round((weight * 100) / total_fund_weight, 2)
 
+    # reorder the holdings, from largest to smallest weight
+    portfolio = {
+        k: portfolio[k] for k in sorted(portfolio, key=portfolio.get, reverse=True)
+    }
     print(portfolio)
 
     if args.out_file:
         with open(args.out_file, "w") as csv_file:
-            print(f"Exporting to {args.out_file}...")
+            log.info(f"Exporting to {args.out_file}...")
             writer = csv.writer(csv_file, delimiter=",", lineterminator="\n")
             for key, value in portfolio.items():
                 writer.writerow([key, value])

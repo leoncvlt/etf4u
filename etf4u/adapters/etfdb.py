@@ -2,7 +2,7 @@ import urllib.request, logging, json
 from lxml import html
 from utils import HEADERS
 
-log = logging.getLogger(__name__)
+log = logging.getLogger(f"etf4u.{__name__}")
 
 FUNDS = []
 
@@ -14,7 +14,6 @@ def fetch(fund):
     res = urllib.request.urlopen(req)
     tree = html.parse(res)
     table = tree.xpath("//table[@data-hash='etf-holdings']")[0]
-    print(table.get("data-url"))
 
     # etfdb only returns 15 results, but we can iterated different sorting
     # criterias in the request to maximize the number of different holdings
@@ -34,6 +33,4 @@ def fetch(fund):
             if symbol != "N/A":
                 result[symbol] = weight
 
-    # reorder the holdings, from largest to smallest weight
-    result = {k: result[k] for k in sorted(result, key=result.get, reverse=True)}
     return result
