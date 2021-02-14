@@ -48,7 +48,7 @@ def main():
         description="Scrapes ETF holdings data and creates blended assets lists"
     )
     argparser.add_argument(
-        "--funds",
+        "funds",
         nargs="+",
         default=[],
         help="Add the ETF with this symbol to the mix",
@@ -80,10 +80,6 @@ def main():
     rich_handler.setFormatter(logging.Formatter(fmt="%(message)s", datefmt="[%X]"))
     log.addHandler(rich_handler)
     log.propagate = False
-
-    if not args.funds:
-        log.warning("Please add at least one ETF fund with using --funds [symbol]")
-        sys.exit(0)
 
     # start the application
     portfolio = {}
