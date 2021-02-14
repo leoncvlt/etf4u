@@ -91,7 +91,7 @@ def main():
         sanitized_fund = fund.lower()
         for loader, name, _ in pkgutil.iter_modules(adapters.__path__):
             adapter = loader.find_module(name).load_module(name)
-            if sanitized_fund in adapter.FUNDS:
+            if sanitized_fund in [f.lower() for f in adapter.FUNDS] :
                 log.info(f"Fetching ETF {sanitized_fund.upper()} using {name} adapter")
                 if args.no_cache:
                     result = adapter.fetch(sanitized_fund)

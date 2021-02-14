@@ -5,9 +5,11 @@ description = ""
 authors = ["Leonardo Cavaletti <impeto.blu@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.6.1"
 rich = "^9.10.0"
 lxml = "^4.6.2"
+selenium-wire = "^4.0.4"
+chromedriver-autoinstaller = "^0.2.2"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.6.0"
