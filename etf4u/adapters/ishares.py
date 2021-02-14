@@ -3,6 +3,10 @@ from utils import HEADERS
 
 log = logging.getLogger(f"etf4u.{__name__}")
 
+# The iShares adapter fetches the .csv file of the funds' holdings published on their site
+# AFAIK there's no way to do this programmatically for any fund so we need to manually
+# add the unique URL for each fund's file (see get_fund_file() function below)
+
 FUNDS = ["icln"]
 
 

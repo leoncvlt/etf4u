@@ -3,6 +3,8 @@ from utils import HEADERS
 
 log = logging.getLogger(f"etf4u.{__name__}")
 
+# The ARK adapter fetches the .csv file of the funds' holdings published on their site
+
 FUNDS = ["arkk", "arkw", "arkq", "arkf", "arkg"]
 
 
