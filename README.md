@@ -11,17 +11,22 @@ Make sure you're in your virtual environment of choice, then run
 ## Usage
 
 ```
-etf4u [-h] [--clamp CLAMP] [--out-file OUT_FILE] [--no-cache] [-v] funds [funds ...]
+etf4u [-h] [--clamp CLAMP] [--minimum MINIMUM] [--exclude EXCLUDE [EXCLUDE ...]] [--include INCLUDE [INCLUDE ...]] [--out-file OUT_FILE] [--no-cache] [-v] funds [funds ...]
 
 positional arguments:
-  funds                Add the ETF with this symbol to the mix
+  funds                 A list of ETF symbols (or a single one) to scrape
 
 optional arguments:
-  -h, --help           show this help message and exit
-  --clamp CLAMP        Clamp the number of maximum assets to this value, redistributing weights
-  --out-file OUT_FILE  Exports the holdings list to this comma-separated (.csv) file
-  --no-cache           Don't use cache files to load or store data
-  -v, --verbose        Increase output log verbosity
+  -h, --help            show this help message and exit
+  --clamp CLAMP         Clamp the number of maximum assets to this value, redistributing weights
+  --minimum MINIMUM     Remove all assets with allocation smaller than this number after redistribution
+  --exclude EXCLUDE [EXCLUDE ...]
+                        A list of tickers to exclude from the scraped portfolio. Pass the tickers directly to the argument (e.g. --exclude AAA BBB CCC) Or pass the path to a text file containing the tickers
+  --include INCLUDE [INCLUDE ...]
+                        Only include assets whose ticker appear in this list. Pass the tickers directly to the argument (e.g. --include AAA BBB CCC) Or pass the path to a text file containing the tickers
+  --out-file OUT_FILE   Exports the holdings list to this comma-separated (.csv) file
+  --no-cache            Don't use cache files to load or store data
+  -v, --verbose         Increase output log verbosity
   ```
 
 ## Explanation
@@ -46,3 +51,6 @@ No need to add anything else, the script automatically checks all modules in the
 ## Example usage
 `python etf4u ARKK ARKW ARKQ ARKF ARKG --clamp 50 --out-file blend_ark.csv`
 Adds together all holdings the 5 ARK’s Active ETFs, keeps only the top 50 holdings on the list, rebalances all weights proportionally and exports the assets list to the `blend_ark.csv` file 
+
+## Support [![Buy me a coffee](https://img.shields.io/badge/-buy%20me%20a%20coffee-lightgrey?style=flat&logo=buy-me-a-coffee&color=FF813F&logoColor=white "Buy me a coffee")](https://www.buymeacoffee.com/leoncvlt)
+If this tool has proven useful to you, consider [buying me a coffee](https://www.buymeacoffee.com/leoncvlt) to support development of this and [many other projects](https://github.com/leoncvlt?tab=repositories).

@@ -51,13 +51,35 @@ def main():
         "funds",
         nargs="+",
         default=[],
-        help="Add the ETF with this symbol to the mix",
+        help="A list of ETF symbols (or a single one) to scrape",
     )
     argparser.add_argument(
         "--clamp",
         type=int,
         default=0,
         help="Clamp the number of maximum assets to this value, redistributing weights",
+    )
+    argparser.add_argument(
+        "--minimum",
+        type=float,
+        default=0.0,
+        help="Remove all assets with allocation smaller than this number after redistribution",
+    )
+    argparser.add_argument(
+        "--exclude",
+        nargs="+",
+        default=[],
+        help="A list of tickers to exclude from the scraped portfolio. "
+        "Pass the tickers directly to the argument (e.g. --exclude AAA BBB CCC) "
+        "Or pass the path to a text file containing the tickers",
+    )
+    argparser.add_argument(
+        "--include",
+        nargs="+",
+        default=[],
+        help="Only include assets whose ticker appear in this list. "
+        "Pass the tickers directly to the argument (e.g. --include AAA BBB CCC) "
+        "Or pass the path to a text file containing the tickers",
     )
     argparser.add_argument(
         "--out-file",
@@ -87,7 +109,7 @@ def main():
         sanitized_fund = fund.lower()
         for loader, name, _ in pkgutil.iter_modules(adapters.__path__):
             adapter = loader.find_module(name).load_module(name)
-            if sanitized_fund in [f.lower() for f in adapter.FUNDS] :
+            if sanitized_fund in [f.lower() for f in adapter.FUNDS]:
                 log.info(f"Fetching ETF {sanitized_fund.upper()} using {name} adapter")
                 if args.no_cache:
                     result = adapter.fetch(sanitized_fund)
@@ -106,6 +128,31 @@ def main():
 
             portfolio = combine_dicts(portfolio, result)
 
+    # process inclusion list / file
+    if len(args.include):
+        inclusion_list = args.include
+        if Path(inclusion_list[0]).is_file():
+            with open(inclusion_list[0]) as f:
+                inclusion_list = f.read().split()
+        portfolio = {
+            asset: weight
+            for (asset, weight) in portfolio.items()
+            if asset in inclusion_list
+        }
+
+    # process exclusion list / file
+    if len(args.exclude):
+        exclusion_list = args.include
+        if Path(exclusion_list[0]).is_file():
+            with open(exclusion_list[0]) as f:
+                exclusion_list = f.read().split()
+        portfolio = {
+            asset: weight
+            for (asset, weight) in portfolio.items()
+            if not asset in exclusion_list
+        }
+
+    # clamp assets amount if necessary
     if args.clamp:
         portfolio = dict(
             sorted(portfolio.items(), key=operator.itemgetter(1), reverse=True)[
@@ -113,16 +160,35 @@ def main():
             ]
         )
 
-    total_fund_weight = sum([float(value) for value in portfolio.values()])
-    for holding, weight in portfolio.items():
-        portfolio[holding] = round((weight * 100) / total_fund_weight, 2)
+    # go through the portfolio, redistributing all weights to a 100% allocation value,
+    # and if any asset doesn't meet the minimum allocation value once redistributed,
+    # remove those from the portfolio and redistribute again afterwards
+    redistributed = False
+    while not redistributed:
+        total_fund_weight = sum([float(value) for value in portfolio.values()])
+        holdings_to_remove = []
+        redistribution_successful = True
+        for holding, weight in portfolio.items():
+            new_weight = round((weight * 100) / total_fund_weight, 2)
+            if new_weight >= args.minimum and not holding in args.exclude:
+                portfolio[holding] = new_weight
+            else:
+                log.debug(f"{holding} doesn't meet minimum allocation value")
+                holdings_to_remove.append(holding)
+                if redistribution_successful:
+                    redistribution_successful = False
+        for holding in holdings_to_remove:
+            del portfolio[holding]
+        redistributed = redistribution_successful
 
     # reorder the holdings, from largest to smallest weight
     portfolio = {
         k: portfolio[k] for k in sorted(portfolio, key=portfolio.get, reverse=True)
     }
+
     print(portfolio)
 
+    # export to file
     if args.out_file:
         with open(args.out_file, "w") as csv_file:
             log.info(f"Exporting to {args.out_file}...")
