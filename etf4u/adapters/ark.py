@@ -31,9 +31,12 @@ def fetch(fund):
     data = csv.reader([l.decode("utf-8") for l in res.readlines()])
     next(data)
     for holding in data:
-        ticker = holding[3]
-        weight = holding[7]
-        if not ticker or not weight:
-            break
-        result[ticker] = result.get(ticker, 0) + float(weight)
+        try:
+            ticker = holding[3]
+            weight = holding[7]
+            if not ticker or not weight:
+                continue
+            result[ticker] = result.get(ticker, 0) + float(weight)
+        except IndexError:
+            continue
     return result
