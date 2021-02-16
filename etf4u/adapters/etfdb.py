@@ -1,4 +1,4 @@
-import urllib.request, logging, json
+import urllib.request, logging, json, time
 from lxml import html
 from utils import HEADERS
 
@@ -16,7 +16,7 @@ def fetch(fund):
     result = {}
     fund_csv_url = f"https://etfdb.com/etf/{fund.upper()}/"
     req = urllib.request.Request(fund_csv_url, headers=HEADERS)
-    res = urllib.request.urlopen(req)
+    res = urllib.request.urlopen(req, timeout=60)
     tree = html.parse(res)
     table = tree.xpath("//table[@data-hash='etf-holdings']")[0]
 
@@ -28,6 +28,7 @@ def fetch(fund):
         "&sort=symbol&order=asc",
         "&sort=symbol&order=desc",
     ]:
+        log.debug(f"fetching query {query}")
         holdings_url = f"https://etfdb.com/{table.get('data-url')}{query}"
         holdings_req = urllib.request.Request(holdings_url, headers=HEADERS)
         holdings_res = urllib.request.urlopen(holdings_req)
@@ -37,5 +38,6 @@ def fetch(fund):
             weight = float(row["weight"].strip("%"))
             if symbol != "N/A":
                 result[symbol] = weight
+        time.sleep(0.5)
 
     return result
