@@ -11,13 +11,13 @@ FUNDS = ["arkk", "arkw", "arkq", "arkf", "arkg"]
 def get_fund_file(fund):
     funds_filenames = {
         "arkk": "ARK_INNOVATION_ETF_ARKK_HOLDINGS",
-        "arkw": "ARK_NEXT_GENERATION_INTERNET_ETF_ARKW_HOLDINGS",
-        "arkq": "ARK_AUTONOMOUS_TECHNOLOGY_&_ROBOTICS_ETF_ARKQ_HOLDINGS",
-        "arkf": "ARK_FINTECH_INNOVATION_ETF_ARKF_HOLDINGS",
-        "arkg": "ARK_GENOMIC_REVOLUTION_MULTISECTOR_ETF_ARKG_HOLDINGS",
+        "arkw": "ARK_INNOVATION_ETF_ARKW_HOLDINGS",
+        "arkq": "ARK_INNOVATION_ETF_ARKQ_HOLDINGS",
+        "arkf": "ARK_INNOVATION_ETF_ARKF_HOLDINGS",
+        "arkg": "ARK_INNOVATION_ETF_ARKG_HOLDINGS"
     }
     return (
-        "https://ark-funds.com/wp-content/fundsiteliterature/csv/"
+        "https://ark-funds.com/wp-content/uploads/funds-etf-csv/"
         + funds_filenames[fund]
         + ".csv"
     )
@@ -36,7 +36,7 @@ def fetch(fund):
             weight = holding[7]
             if not ticker or not weight:
                 continue
-            result[ticker] = result.get(ticker, 0) + float(weight)
+            result[ticker] = result.get(ticker, 0) + float(weight.strip('%'))/100
         except IndexError:
             continue
     return result
