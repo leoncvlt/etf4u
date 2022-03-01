@@ -40,8 +40,13 @@ def timed_lru_cache(seconds: int, maxsize: int = 128):
 @timed_lru_cache(seconds = 8*60**2) #cache data for 8 hours
 def decompose(etf_ticker):
     sanitized_fund = etf_ticker.lower()
+    selenium_driven_adapters = ['vanguard']
     result = None
     for loader, name, _ in pkgutil.iter_modules(adapters.__path__):
+        if name in selenium_driven_adapters:
+            # couldn't get selenium to work on heroku
+            continue
+
         adapter = loader.find_module(name).load_module(name)
         if sanitized_fund in [f.lower() for f in adapter.FUNDS]:
             # log.info(f"Fetching ETF {sanitized_fund.upper()} using {name} adapter")
@@ -53,7 +58,7 @@ def decompose(etf_ticker):
         result = etfdb.fetch(sanitized_fund)
     return {k: result[k] for k in sorted(result, key = result.get, reverse= True)}
 
-@app.get("/query", response_model = dict, response_model_exclude_unset = True)
+@app.get("/query/{etf_ticker}", response_model = dict, response_model_exclude_unset = True)
 async def query(etf_ticker: str):
     ''' get ETF constituents
     * `etf_ticker`: a single etf symbol/ ticker
