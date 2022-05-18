@@ -36,7 +36,7 @@ def fetch(fund):
             weight = holding[7]
             if not ticker or not weight:
                 continue
-            result[ticker] = result.get(ticker, 0) + float(weight.strip('%'))/100
+            result[ticker] = result.get(ticker, 0) + float(weight.strip('%')) #/100
         except IndexError:
             continue
     return result
